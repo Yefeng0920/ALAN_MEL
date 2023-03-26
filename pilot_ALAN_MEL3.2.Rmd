@@ -78,17 +78,17 @@ pacman::p_load(tidyverse,
                ggtree,
                multcomp,
                ggsankey,
-               flextable
+               flextable,
+               visdat,
+               naniar
                )
-
 ```
 
 # Custom function
 
 ```{r}
 # custom function
-#source("./custom_function.R")
-source(here("function","custom_function.R"))
+source("./custom_function.R")
 eval(metafor:::.MuMIn)
 eval(metafor:::.glmulti)
 
@@ -330,8 +330,7 @@ The extracted variables for the meta-analysis of melatonin.
 
 ```{r datset}
 # load data
-#dat_raw <- read_xlsx(path = "MEL_data_merge.xlsx")
-dat_raw <- read_xlsx(here("data","MEL_data_merge.xlsx"))
+dat_raw <- read_xlsx(path = "MEL_data_merge.xlsx")
 
 # show data in a data
 t1 <- dat_raw %>% DT::datatable()
@@ -1066,38 +1065,35 @@ spp.class2$Class[spp.class2$Class == "Actinopterygii"] <- "Osteichthyes"
 p1 <- ggtree(my.tr, branch.length = "branch.length") 
 # https://yulab-smu.top/treedata-book/chapter7.html  
 p2 <- p1 %<+% spp.class2 + geom_tiplab(aes(color  = Class),size=3,fontface = "italic") + geom_tippoint(aes(color=Class)) + xlim_expand(c(0,3), panel = "Tree") + guides(color="none")  # xlim issue https://stackoverflow.com/questions/48928250/ggtreefacet-plot-second-panel-uses-xlim-parameter-from-first-one
-p3 <- facet_plot(p2, panel = 'Sample size', data = fe.spp.lnRR2, 
+p3 <- facet_plot(p2, panel = 'N observations', data = fe.spp.lnRR2, 
 				geom = geom_barh, 
 				mapping = aes(x = N_obs,fill=Class,color=Class), alpha = 0.4, stat='identity') +  guides(fill="none",color="none") + # #0072B2 https://yulab-smu.top/treedata-book/chapter12.html,
-  geom_facet(panel = "Model estimates of mean ratio", data = fe.spp.lnRR2,
+  geom_facet(panel = "Estimates of mean ratio (lnRR)", data = fe.spp.lnRR2,
            geom = ggstance::geom_pointrangeh, # geom_pointrange
            mapping = aes(x = Mean, xmin = Lower_bound, xmax = Upper_bound, color = Class)) + # #CC79A7
   # add overall effect MLMA_lnRR$b
-  geom_facet(panel = "Model estimates of mean ratio", data = fe.spp.lnRR2,
+  geom_facet(panel = "Estimates of mean ratio (lnRR)", data = fe.spp.lnRR2,
            geom = geom_vline, 
            mapping = aes(xintercept = -0.45),linetype="dashed",color="grey") +  # add multiple panels or multiple layers on the same panels (Figure 13.1) # https://yulab-smu.top/treedata-book/chapter7.html - at Chapter 13
-  geom_facet(panel = "Model estimates of CV ratio", data = fe.spp.lnCVR2,
+  geom_facet(panel = "Estimates of CV ratio (lnCVR)", data = fe.spp.lnCVR2,
            geom = ggstance::geom_pointrangeh, 
            mapping = aes(x = Mean, xmin = Lower_bound, xmax = Upper_bound, color = Class)) + 
   # add overall effect MLMA_lnCVR$b
-  geom_facet(panel = "Model estimates of CV ratio", data = fe.spp.lnRR2,
+  geom_facet(panel = "Estimates of CV ratio (lnCVR)", data = fe.spp.lnRR2,
            geom = geom_vline, 
            mapping = aes(xintercept = 0.21), linetype="dashed",color="grey") + 
   theme_tree2() + theme(strip.background = element_rect(fill = "white"))
 
 # lbs <- c(Tree = "Phylogenetic tree") # change facet name # https://guangchuangyu.github.io/cn/2018/09/facet_labeller/
 # p3 <- ggtree::facet_labeller(p3,lbs)
-p4 <- facet_widths(p3, c(Tree=0.7,`Sample size`=0.2,`Model estimates of mean ratio`=0.4,`Model estimates of CV ratio`=0.4)) # set the widths of specific panels (it also supports using a name vector)
+p4 <- facet_widths(p3, c(Tree=0.7,`N observations`=0.2,`Estimates of mean ratio (lnRR)`=0.4,`Estimates of CV ratio (lnCVR)`=0.4)) # set the widths of specific panels (it also supports using a name vector)
 
-png(filename = "Phy_est.png", width = 8, height = 6, units = "in", type = "windows", res = 400)
+png(filename = "Figure 3 (Phy_est).png", width = 8, height = 6, units = "in", type = "windows", res = 400)
 p4
 dev.off()
 
 ```
 
-# branch length
-https://wiki.duke.edu/pages/viewpage.action?pageId=131172289
-https://search.r-project.org/CRAN/refmans/ape/html/compute.brlen.html
 
 # Map
 
@@ -1172,24 +1168,22 @@ dev.off()
 
 
 # https://cran.r-project.org/web/packages/naniar/vignettes/getting-started-w-naniar.html
-library(visdat)
-library(naniar)
 # one way to report missness
 dat %>%
   dplyr::select(grouped_tissue,Species_diurnal_nocturnal,Captive_or_Free_living,Light_colour,Night_Phase_category,Night_light_intensity_exp,Light_wavelength,Exposure_duration,Randomisation_animal,Blind_meansurement,Sex,Melatonin_sample_time,Melatonin_test_method,Class) -> df2
 
-names(df2) <- c("Melaotnin location", "Active times", "Living conditions", "Light colour", "Light phase", "Light intensity", "Light wavelength", "ALAN duration", "Randomization", "Blindness","Sex","Sampling time","Measurement method","Class")
+names(df2) <- c("Melaotnin location", "Activity time", "Living conditions", "Light colour", "Light phase", "Light intensity", "Light wavelength", "ALAN duration", "Randomization", "Obs. blinding","Sex","Sampling time","Measurement method","Class")
 
 df2 %>% gg_miss_var() + theme_bw() +
-  labs(x = " ", y  = "The number of missingness") -> missness_plot
+  labs(x = " ", y  = "Number of effect sizes with missing information") -> missness_plot
 
 # alternative way
 dat %>%
   dplyr::select(grouped_tissue,Species_diurnal_nocturnal,Captive_or_Free_living,Light_colour,Night_Phase_category,Night_light_intensity_exp,Light_wavelength,Exposure_duration,Randomisation_animal,Blind_meansurement,Sex,Melatonin_sample_time,Melatonin_test_method,Class) -> df2
 
-names(df2) <- c("Melaotnin location", "Active times", "Living conditions", "Light colour", "Light phase", "Light intensity", "Light wavelength", "ALAN duration", "Randomization", "Blindness","Sex","Sampling time","Measurement method","Class")
+names(df2) <- c("Melaotnin location", "Activity time", "Living conditions", "Light colour", "Light phase", "Light intensity", "Light wavelength", "ALAN duration", "Randomization", "Obs. blinding","Sex","Sampling time","Measurement method","Class")
 
-df2 %>% gg_miss_fct(fct = Class) + labs(y = "") -> missness_plot2
+df2 %>% gg_miss_fct(fct = Class) + labs(y = "") + guides(fill = guide_legend(title = "%")) -> missness_plot2
 
 png(filename = "./Figure S5 (missness plot).png", width = 8, height = 4, units = "in", type = "windows", res = 400)
 missness_plot + missness_plot2 + plot_annotation(tag_levels = "A")
@@ -1197,22 +1191,22 @@ dev.off()
 
 
 # visualize study characteristics
-library(ggsankey) # https://github.com/davidsjoberg/ggsankey
+#library(ggsankey) # https://github.com/davidsjoberg/ggsankey
 # make a copy
-dat_study_charac <- dat
-df <- dat %>%
-  make_long(grouped_tissue,Species_diurnal_nocturnal,Captive_or_Free_living,Light_colour,Night_Phase_category)
+#dat_study_charac <- dat
+#df <- dat %>%
+#  make_long(grouped_tissue,Species_diurnal_nocturnal,Captive_or_Free_living,Light_colour,Night_Phase_category)
 
-df1 <- dat %>%
-  dplyr::select(Class, grouped_tissue,Species_diurnal_nocturnal,Captive_or_Free_living,Light_colour,Night_Phase_category) 
+#df1 <- dat %>%
+#  dplyr::select(Class, #grouped_tissue,Species_diurnal_nocturnal,Captive_or_Free_living,Light_colour,Night_Phase_category) 
 # change to a formal name
-df1$grouped_tissue <- ifelse(df1$grouped_tissue == "Central","Central Mel", "Peripheral Mel")
-df1$Species_diurnal_nocturnal <- ifelse(df1$Species_diurnal_nocturnal == "Diurnal","Diurnal Spp", "Nocturnal Spp")
-df1$Captive_or_Free_living <- ifelse(df1$Captive_or_Free_living == "Captive","Captive Spp", "Free-living Spp")
+#df1$grouped_tissue <- ifelse(df1$grouped_tissue == "Central","Central Mel", "Peripheral Mel")
+#df1$Species_diurnal_nocturnal <- ifelse(df1$Species_diurnal_nocturnal == "Diurnal","Diurnal Spp", "Nocturnal Spp")
+#df1$Captive_or_Free_living <- ifelse(df1$Captive_or_Free_living == "Captive","Captive Spp", "Free-living Spp")
 # replace NA
-df1$grouped_tissue <- ifelse(is.na(df1$grouped_tissue), "Not reporting", df1$grouped_tissue)
-df1$Light_colour <- ifelse(is.na(df1$Light_colour), "Not reporting", df1$Light_colour)
-df1$Night_Phase_category <- ifelse(is.na(df1$Night_Phase_category), "Not reporting", df1$Night_Phase_category)
+#df1$grouped_tissue <- ifelse(is.na(df1$grouped_tissue), "Not reported", df1$grouped_tissue)
+#df1$Light_colour <- ifelse(is.na(df1$Light_colour), "Not reported", df1$Light_colour)
+#df1$Night_Phase_category <- ifelse(is.na(df1$Night_Phase_category), "Not reported", df1$Night_Phase_category)
 
 #tabyl(dat,Captive_or_Free_living,Outdoor_or_Indoor)
 # relevel
@@ -1222,28 +1216,28 @@ df1$Night_Phase_category <- ifelse(is.na(df1$Night_Phase_category), "Not reporti
 #df1$Light_colour <- factor(df1$Light_colour, levels = c("Blue","Yellow","Red","White","Not reporting"))
 #df1$Night_Phase_category <- factor(df1$Night_Phase_category, levels = c("Early night","Mid night","Late night","All night","Not reporting"))
 
-df <- df1 %>%
-  make_long(Class,grouped_tissue,Species_diurnal_nocturnal,Captive_or_Free_living,Light_colour,Night_Phase_category)
+#df <- df1 %>%
+#  make_long(Class,grouped_tissue,Species_diurnal_nocturnal,Captive_or_Free_living,Light_colour,Night_Phase_category)
 
 
-png(filename = "./Figure 1 (alluvil plot).png", width = 6, height = 3, units = "in", type = "windows", res = 400)
-ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
-  geom_sankey(flow.alpha = .6,
-              node.color = "gray30") +
-  geom_sankey_label(size = 3, color = "white", fill = "gray40") +
-  scale_fill_viridis_d() +
-  theme_sankey(base_size = 10) +
-  labs(x = NULL) +
-  theme(legend.position = "none",
-        plot.title = element_text(hjust = .5),
-        axis.text.x = element_text(color = "black", size = 9)) +
-  #ggtitle("Moderator variable features") +
-scale_x_discrete(labels = c("Class","Melaotnin location", "Active times", "Living conditions", "Light colour", "Light phase"))
-dev.off()
+#png(filename = "./Figure 1 (alluvil plot).png", width = 6, height = 3, units = "in", type = "windows", res = 400)
+#ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
+#  geom_sankey(flow.alpha = .6,
+#              node.color = "gray30") +
+#  geom_sankey_label(size = 3, color = "white", fill = "gray40") +
+#  scale_fill_viridis_d() +
+#  theme_sankey(base_size = 10) +
+#  labs(x = NULL) +
+#  theme(legend.position = "none",
+#        plot.title = element_text(hjust = .5),
+#        axis.text.x = element_text(color = "black", size = 9)) +
+#  #ggtitle("Moderator variable features") +
+#scale_x_discrete(labels = c("Class","Melaotnin location", "Activity times", "Living conditions", "Light colour", "Light phase"), position = "top")
+#dev.off()
 
 
 
-# another version
+# naive version
 # draw an alluvial plot to show the heterogeneous experimental designs of the studies included in the meta-analysis
 freq <- as.data.frame(with(dat,table(Captive_or_Free_living,Outdoor_or_Indoor,Night_Phase_category,grouped_tissue)))  #make a dataframe of frequencies for four selected variables
 
@@ -1267,12 +1261,12 @@ alluvil_plot2 <- ggplot(data = freq, aes(axis1 = Captive_or_Free_living, axis2 =
 # dev.off()
 
 
-# visualize reearch gap
+# visualize research gap
 # tabyl(dat,Study_type,Night_Phase_category)[1:length(unique(dat$Night_Phase_category))] %>% as.data.frame() -> data2 # remove the last column that contains NA
 
 tabyl(dat,Species_diurnal_nocturnal,Light_colour) %>% as.data.frame() -> data2
 
-colnames(data2)[colnames(data2)=="NA_"] <- "No reporting"
+colnames(data2)[colnames(data2)=="NA_"] <- "No reported"
 
 # https://www.geeksforgeeks.org/convert-values-in-column-into-row-names-of-dataframe-in-r/
 data2 %>% remove_rownames %>% column_to_rownames(var="Species_diurnal_nocturnal") %>% ggpubr::ggballoonplot(color = "#0073C2FF", fill = "#0073C2FF")
@@ -1287,23 +1281,37 @@ data2 %>% remove_rownames %>% column_to_rownames(var="Species_diurnal_nocturnal"
 
 
 # stretched contingency table
-with(dat,ftable(Class,Light_colour)) %>% data.frame() -> data2
+#with(dat,ftable(Class,Light_colour)) %>% data.frame() -> data2
 # alternatively
 # with(dat,table(Randomisation_animal,Species_diurnal_nocturnal,grouped_tissue,Daytime_or_nighttime_melatonin)) %>% as.data.frame()
 
-names(data2) <- c("Class","Light colour","Freq")
-png(filename = "Figure S6 (Ballon plot).png", width = 6, height = 4, units = "in", type = "windows", res = 400)
-Ballon_plot <- ggballoonplot(data2, x = "Class", y = "Light colour",
- size = "Freq", fill = "Freq", 
+# reorder dataframe - https://www.statology.org/sort-dataframe-by-column-in-r/
+#data2[order(-data2$Freq), ]
+
+#reorder(predictor, weight)
+
+#names(data2) <- c("Class","Light colour","Freq")
+# convert into factor
+#data2[c("Class","Light colour")] <- lapply(data2[c("Class","Light colour")], factor)
+# check conversion
+#sapply(data2, class)
+# relevel to make the best-representative color to appear as the first
+#data2$`Light colour` <- factor(data2$`Light colour`, levels = c("Yellow", "Red",  "Blue", "White"))
+#data2$Class <- factor(data2$Class, levels = c("Mammalia", "Aves", "Osteichthyes", "Reptilia", "Actinopterygii", "Amphibia"))
+
+
+#png(filename = "Figure S6 (Ballon plot).png", width = 6, height = 4, units = "in", type = "windows", res = 400)
+#Ballon_plot <- ggballoonplot(data2, x = "Class", y = "Light colour",
+# size = "Freq", fill = "Freq", 
  #facet.by = c("Study_design"),
- ggtheme = theme_bw()) +
- scale_fill_continuous(type = "gradient") + #https://ggplot2.tidyverse.org/reference/scale_colour_continuous.html#:~:text=The%20scales%20scale_colour_continuous%20%28%29%20and%20scale_fill_continuous%20%28%29%20are,mapped%20onto%20the%20colour%20or%20fill%20aesthetics%2C%20respectively.
+# ggtheme = theme_bw()) +
+# scale_fill_continuous(type = "gradient") + #https://ggplot2.tidyverse.org/reference/scale_colour_continuous.html#:~:text=The%20scales%20scale_colour_continuous%20%28%29%20and%20scale_fill_continuous%20%28%29%20are,mapped%20onto%20the%20colour%20or%20fill%20aesthetics%2C%20respectively.
  #scale_fill_gradientn(colors = c("#0D0887FF")) +
- guides(fill = "none") + 
- labs(size = "Sample size") + 
- theme(strip.background = element_rect(fill = "white"))
-Ballon_plot
-dev.off()
+# guides(fill = "none") + 
+# labs(size = "The number of \n effect sizes") + 
+# theme(strip.background = element_rect(fill = "white"))
+#Ballon_plot
+#dev.off()
 
 
 
@@ -2566,15 +2574,16 @@ vip_predictors <- vip_predictors %>% mutate(R2 = c(r2_ml(MLMR_3N_lnRR)[1],r2_ml(
 
 # plot - the overall support for each variable across all models
 # plot(MLMR.candidate2, type="s") # edit(plot.glmulti) 
-png(filename = "model_selection.p.png", width = 6, height = 4, units = "in", type = "windows", res = 400)
+png(filename = "Figure 7 (model_selection).png", width = 6.5, height = 4, units = "in", type = "windows", res = 400)
 vip_predictors %>% dfround(3)  %>%
-  ggplot(aes(x = reorder(predictor, weight), y = weight, fill = predictor)) +
+  ggplot(aes(x = reorder(predictor, weight), y = weight), fill = "lightgrey") +
   geom_col(aes(), width = 0.7) +
   #scale_fill_manual(values = cols) +
   coord_flip() + 
   labs(y = "Akaike weights", x = "Moderator variables", title = "") +
   #ylim(0,1)+
   scale_y_continuous(expand = expansion(mult = c(0, 0.2))) +
+  #coord_cartesian(ylim = c(0,1)) + 
   geom_text(aes(label=scales::percent(weight, accuracy = 1)), size = 3, position = position_stack(vjust = 0.5), color = "white", fontface = "bold") +
   geom_text(aes(label = paste0("italic(R)^2==", reorder(R2,weight))), parse = T, hjust = -0.2, size = 3) +
   theme(legend.position = "none",
@@ -2585,7 +2594,7 @@ vip_predictors %>% dfround(3)  %>%
         axis.title.y = element_text(size = 12, color = "black"),
         axis.ticks.y = element_blank(),
         axis.line.x = element_line(colour = "black")) +
-  scale_x_discrete(labels = c("Exposure duration", "Active time of Spp","Living condition of Spp","Location of Mel","Light intensity","Light phase","Light color"))
+  scale_x_discrete(labels = c("Exposure duration of ALAN", "Activity time of Spp","Living condition of Spp","Location of Mel","Light intensity","Light phase","Light color"))
 dev.off()
 
 
@@ -3839,28 +3848,28 @@ spp.class2$Class[spp.class2$Class == "Actinopterygii"] <- "Osteichthyes"
 p1 <- ggtree(my.tr, branch.length = "branch.length") 
 # https://yulab-smu.top/treedata-book/chapter7.html  
 p2 <- p1 %<+% spp.class2 + geom_tiplab(aes(color  = Class),size=3,fontface = "italic") + geom_tippoint(aes(color=Class)) + xlim_expand(c(0,3), panel = "Tree") + guides(color="none")  # xlim issue https://stackoverflow.com/questions/48928250/ggtreefacet-plot-second-panel-uses-xlim-parameter-from-first-one
-p3 <- facet_plot(p2, panel = 'Sample size', data = re.spp.lnRR2, 
+p3 <- facet_plot(p2, panel = 'N observations', data = re.spp.lnRR2, 
 				geom = geom_barh, 
 				mapping = aes(x = N_obs,fill=Class,color=Class), alpha = 0.4, stat='identity') +  guides(fill="none",color="none") + # #0072B2 https://yulab-smu.top/treedata-book/chapter12.html,
-  geom_facet(panel = "Model estimates of mean ratio", data = re.spp.lnRR2,
+  geom_facet(panel = "Estimates of mean ratio (lnRR)", data = re.spp.lnRR2,
            geom = ggstance::geom_pointrangeh, # geom_pointrange
            mapping = aes(x = Mean, xmin = Lower_bound, xmax = Upper_bound, color = Class)) + # #CC79A7
   # add overall effect MLMA_lnRR$b
-  geom_facet(panel = "Model estimates of mean ratio", data = re.spp.lnRR2,
+  geom_facet(panel = "Estimates of mean ratio (lnRR)", data = re.spp.lnRR2,
            geom = geom_vline, 
            mapping = aes(xintercept = -0.45),linetype="dashed",color="grey") +  # add multiple panels or multiple layers on the same panels (Figure 13.1) # https://yulab-smu.top/treedata-book/chapter7.html - at Chapter 13
-  geom_facet(panel = "Model estimates of CV ratio", data = re.spp.lnCVR2,
+  geom_facet(panel = "Estimates of CV ratio (lnCVR)", data = re.spp.lnCVR2,
            geom = ggstance::geom_pointrangeh, 
            mapping = aes(x = Mean, xmin = Lower_bound, xmax = Upper_bound, color = Class)) + 
   # add overall effect MLMA_lnCVR$b
-  geom_facet(panel = "Model estimates of CV ratio", data = re.spp.lnRR2,
+  geom_facet(panel = "Estimates of CV ratio (lnCVR)", data = re.spp.lnRR2,
            geom = geom_vline, 
            mapping = aes(xintercept = 0.21), linetype="dashed",color="grey") + 
   theme_tree2() + theme(strip.background = element_rect(fill = "white"))
 
 # lbs <- c(Tree = "Phylogenetic tree") # change facet name # https://guangchuangyu.github.io/cn/2018/09/facet_labeller/
 # p3 <- ggtree::facet_labeller(p3,lbs)
-p4 <- facet_widths(p3, c(Tree=0.7,`Sample size`=0.2,`Model estimates of mean ratio`=0.4,`Model estimates of CV ratio`=0.4)) # set the widths of specific panels (it also supports using a name vector)
+p4 <- facet_widths(p3, c(Tree=0.7,`N observations`=0.2,`Estimates of mean ratio (lnRR)`=0.4,`Estimates of CV ratio (lnCVR)`=0.4)) # set the widths of specific panels (it also supports using a name vector)
 
 png(filename = "Figure S7 (Phy est).png", width = 8, height = 6, units = "in", type = "windows", res = 400)
 p4
